@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include "embellecer.h"
+#include "Semaforo.h"
 using namespace std;
 
 /*
@@ -39,17 +40,40 @@ string getFromConsole(){
 	return readCode;
 }
 
+struct shMData{
+    int used[64][2];
+    const string RESERVED_WORDS[64] = {"abstract",    "auto",     "bool",         "break",        "case",             "catch",    "char",
+                                       "class",       "const",    "const_cast",   "continue",     "decltype",         "default",  "delete",
+                                       "do",          "double",   "dynamic_cast", "else",         "enum",             "explicit", "extern",
+                                       "false",       "float",    "for",          "friend",       "goto",             "if",       "inline",
+                                       "int",         "long",     "mutable",      "namespace",    "new",              "nullptr",  "operator",
+                                       "private",     "protected","public",       "register",     "reinterpret_cast", "return",   "short",
+                                       "signed",      "sizeof",   "static",       "static_assert","static_cast",      "struct",   "switch",
+                                       "template",    "this",     "throw",        "true",         "try",              "typedef",  "typeid",
+                                       "typename",    "union",    "unsigned",     "using",        "virtual",          "void",     "volatile",
+                                       "while"};
+};
+
 int main(int argc, char** argv) {
     int tabSize = 4;
     Embellecer *e;
     Buzon b;
+    Semaforo s;
+    shMData* shM = shmat(id, NULL, 0);
+    int thisId = shmget(0x00B40340, sizeof(shM), 0700 | IPC_CREAT);
+
     string tabSizeStr = "";//variable que guarda la cantidad de espacios de tabulación en caso que sean ingresados en la ejecución.
     string received = ""; //Variable que guarda la hilera con el código a justificar en caso que sea por la entrada estandar..
     string fileContent = ""; //Variable que guarda la hilera a justificar en caso de que fuera ingresada una hilera.
     string fInstruction = ""; //Variable que se usa para obtener los datos que da el usuario en comandos.
   for(int i = 1; i < argc; i++){
       if(!fork()){
-            printf("\nSoy el hijo #%i!\n",i);
+          if(i == 0){//Printing Son
+
+            s.Wait();
+
+          } else {//indentation son.
+           printf("\nSoy el hijo #%i!\n",i);
            string outFileName = "rst";
            outFileName += to_string(i);
            outFileName += ".txt"; //Variable para nombrar guardar el nombre del archivo de salida.
@@ -60,6 +84,7 @@ int main(int argc, char** argv) {
            e->createUsedWords(b, (long)i);
            delete e;
            _exit(0);
+          }
 	     } else {
       		char rWord[512];
       		int wRepetitions;

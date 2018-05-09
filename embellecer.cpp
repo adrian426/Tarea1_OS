@@ -37,9 +37,9 @@ void Embellecer::indent(int tabs){
 }
 
 string Embellecer::processContent(){
-    prettyCode = "";
+  prettyCode = "";
 	int cuentaSimbolos;
-    bool changeLine = true;
+  bool changeLine = true;
 	char actual;
 	char past;
 	string word = "";
