@@ -44,6 +44,9 @@ public:
      */
     void indent(int tabs);
 
+      
+    string* getRW();
+
 	/*
      * EFE: Lee la hilera a justificar, la guarda en otra donde su resultado ya está justificado y la retorna.
      * REQ: N/A.

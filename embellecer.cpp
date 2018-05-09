@@ -36,6 +36,10 @@ void Embellecer::indent(int tabs){
 	}
 }
 
+string* Embellecer::getRW(){
+  return (string*)RESERVED_WORDS;
+}
+
 string Embellecer::processContent(){
   prettyCode = "";
 	int cuentaSimbolos;

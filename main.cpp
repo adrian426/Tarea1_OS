@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include "embellecer.h"
 #include "Semaforo.h"
 using namespace std;
@@ -42,8 +44,9 @@ string getFromConsole(){
 
 struct shMData{
     int used[64][2];
+    /*
     const string RESERVED_WORDS[64] = {"abstract",    "auto",     "bool",         "break",        "case",             "catch",    "char",
-                                       "class",       "const",    "const_cast",   "continue",     "decltype",         "default",  "delete",
+                                      "class",       "const",    "const_cast",   "continue",     "decltype",         "default",  "delete",
                                        "do",          "double",   "dynamic_cast", "else",         "enum",             "explicit", "extern",
                                        "false",       "float",    "for",          "friend",       "goto",             "if",       "inline",
                                        "int",         "long",     "mutable",      "namespace",    "new",              "nullptr",  "operator",
@@ -52,6 +55,20 @@ struct shMData{
                                        "template",    "this",     "throw",        "true",         "try",              "typedef",  "typeid",
                                        "typename",    "union",    "unsigned",     "using",        "virtual",          "void",     "volatile",
                                        "while"};
+                                       a = 2,
+                                       b = 2,
+                                       c = 7,
+                                       d = 6,
+                                       e = 4,
+                                       f = 4,
+                                       g = 1,
+                                       i = 3,
+                                       l = 1,
+                                       m = 1,
+
+
+ */
+
 };
 
 int main(int argc, char** argv) {
@@ -59,24 +76,33 @@ int main(int argc, char** argv) {
     Embellecer *e;
     Buzon b;
     Semaforo s;
-    shMData* shM = shmat(id, NULL, 0);
-    int thisId = shmget(0x00B40340, sizeof(shM), 0700 | IPC_CREAT);
-
+    int thisId = shmget(0x00B40340, sizeof(shMData), 0700 | IPC_CREAT);
+    shMData* area = (shMData *) shmat(thisId, NULL, 0);
+    string* RWA = e->getRW();//Arreglo de palabras reservadas.
+    for(int i = 0; i < 64; i++){//Blanquea la memoria compartida.
+      for(int j = 0; j < 2; j++){
+        area->used[i][j] = 0;
+      }
+    }
     string tabSizeStr = "";//variable que guarda la cantidad de espacios de tabulación en caso que sean ingresados en la ejecución.
     string received = ""; //Variable que guarda la hilera con el código a justificar en caso que sea por la entrada estandar..
     string fileContent = ""; //Variable que guarda la hilera a justificar en caso de que fuera ingresada una hilera.
     string fInstruction = ""; //Variable que se usa para obtener los datos que da el usuario en comandos.
-  for(int i = 1; i < argc; i++){
+  for(int i = 0; i < argc; i++){
       if(!fork()){
           if(i == 0){//Printing Son
-
+           printf("Impresor");
             s.Wait();
-
+            for(int index = 0; index < 64; index++){
+              if(area->used[index][0] != 0){
+                printf("<%s, %i>\n",RWA[i],area->used[index][0]);
+              }
+            }
+            _exit(0);
           } else {//indentation son.
            printf("\nSoy el hijo #%i!\n",i);
-           string outFileName = "rst";
-           outFileName += to_string(i);
-           outFileName += ".txt"; //Variable para nombrar guardar el nombre del archivo de salida.
+           string outFileName/* = argv[i]*/;
+           outFileName += ".sgr"; //Variable para nombrar guardar el nombre del archivo de salida.
            fileContent = fileContentToString(argv[1]);
            e = new Embellecer(fileContent,tabSize);
            ofstream outFile (outFileName);
@@ -85,17 +111,27 @@ int main(int argc, char** argv) {
            delete e;
            _exit(0);
           }
-	     } else {
+	     } else {//El tata.
       		char rWord[512];
       		int wRepetitions;
       		for(int index = 0; index < 64; index++){
-      			b.Recibir(rWord, wRepetitions,512, (long)i);
+      			b.Recibir(rWord, wRepetitions,512, (long)i);/*
       			if(wRepetitions != 0){
       				printf("<%s, %i>\n",rWord,wRepetitions);
-      				}
+            }*/
+            for(int index = 0; index < 64; index++){
+                if(rWord == RWA[index]){
+                  area->used[index][0] += wRepetitions;
+                  area->used[index][1]++;
+                  index = 64;
+                }
+              }
       			}
+            s.Signal();
          }
   		}
+      shmdt(area);
+      shmctl(thisId, IPC_RMID, NULL);
   }
 
 /* main de la tarea 0
