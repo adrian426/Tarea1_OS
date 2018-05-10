@@ -76,32 +76,42 @@ int main(int argc, char** argv) {
     Embellecer *e;
     Buzon b;
     Semaforo s;
-    int thisId = shmget(0x00B40340, sizeof(shMData), 0700 | IPC_CREAT);
-    shMData* area = (shMData *) shmat(thisId, NULL, 0);
-    string* RWA = e->getRW();//Arreglo de palabras reservadas.
+    int thisId = shmget(0x00B40340, sizeof(int[64][2]), 0700 | IPC_CREAT);
+    int* area = (int*) shmat(thisId, NULL, 0);
+    const string RWA[64] = {"abstract",    "auto",     "bool",         "break",        "case",             "catch",    "char",
+                                      "class",       "const",    "const_cast",   "continue",     "decltype",         "default",  "delete",
+                                       "do",          "double",   "dynamic_cast", "else",         "enum",             "explicit", "extern",
+                                       "false",       "float",    "for",          "friend",       "goto",             "if",       "inline",
+                                       "int",         "long",     "mutable",      "namespace",    "new",              "nullptr",  "operator",
+                                       "private",     "protected","public",       "register",     "reinterpret_cast", "return",   "short",
+                                       "signed",      "sizeof",   "static",       "static_assert","static_cast",      "struct",   "switch",
+                                       "template",    "this",     "throw",        "true",         "try",              "typedef",  "typeid",
+                                       "typename",    "union",    "unsigned",     "using",        "virtual",          "void",     "volatile",
+                                       "while"};
     for(int i = 0; i < 64; i++){//Blanquea la memoria compartida.
       for(int j = 0; j < 2; j++){
-        area->used[i][j] = 0;
+        area[i*2+j] = 0;
       }
     }
     string tabSizeStr = "";//variable que guarda la cantidad de espacios de tabulación en caso que sean ingresados en la ejecución.
     string received = ""; //Variable que guarda la hilera con el código a justificar en caso que sea por la entrada estandar..
     string fileContent = ""; //Variable que guarda la hilera a justificar en caso de que fuera ingresada una hilera.
     string fInstruction = ""; //Variable que se usa para obtener los datos que da el usuario en comandos.
-  for(int i = 0; i < argc; i++){
+  for(int i = 1; i < argc; i++){
       if(!fork()){
           if(i == 0){//Printing Son
            printf("Impresor");
-            s.Wait();
+            //s.Wait();
             for(int index = 0; index < 64; index++){
-              if(area->used[index][0] != 0){
-                printf("<%s, %i>\n",RWA[i],area->used[index][0]);
+              if(area[index*2] != 0){
+                cout<<"<"<<RWA[i]<<", "<< area[index*2]<<">\n";
+                //printf("<%s, %i>\n",RWA[i],area[index*2+0]);
               }
             }
             _exit(0);
           } else {//indentation son.
            printf("\nSoy el hijo #%i!\n",i);
-           string outFileName/* = argv[i]*/;
+           string outFileName = argv[i];
            outFileName += ".sgr"; //Variable para nombrar guardar el nombre del archivo de salida.
            fileContent = fileContentToString(argv[1]);
            e = new Embellecer(fileContent,tabSize);
@@ -121,13 +131,13 @@ int main(int argc, char** argv) {
             }*/
             for(int index = 0; index < 64; index++){
                 if(rWord == RWA[index]){
-                  area->used[index][0] += wRepetitions;
-                  area->used[index][1]++;
+                  area[index*2+0] += wRepetitions;
+                  area[index*2+1]++;
                   index = 64;
                 }
               }
       			}
-            s.Signal();
+            //s.Signal();
          }
   		}
       shmdt(area);
