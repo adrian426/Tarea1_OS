@@ -74,73 +74,79 @@ int main(int argc, char** argv) {
                             "template",    "this",     "throw",        "true",         "try",              "typedef",  "typeid",
                             "typename",    "union",    "unsigned",     "using",        "virtual",          "void",     "volatile",
                             "while"};
-                            /*Frecuencia de la primer letra de las palabras reservadas.
-                            a = 2, b = 2, c = 7, d = 6, e = 4, f = 4, g = 1, i = 3, l = 1, m = 1, n = 3, o = 1, p = 3,
-                            r = 3, s = 8, t = 8,u = 3,v = 3, w = 1.
-                            */
+    /*Frecuencia de la primer letra de las palabras reservadas.
+    a = 2, b = 2, c = 7, d = 6, e = 4, f = 4, g = 1, i = 3, l = 1, m = 1, n = 3, o = 1, p = 3,
+    r = 3, s = 8, t = 8,u = 3,v = 3, w = 1.
+    */
     for(int i = 0; i < 64; i++){//Blanquea la memoria compartida.
-      for(int j = 0; j < 2; j++){
-        area->sec[i].Revisadas = 0;
-        area->sec[i].Veces = 0;
-      }
+        for(int j = 0; j < 2; j++){
+            area->sec[i].Revisadas = 0;
+            area->sec[i].Veces = 0;
+        }
     }
     if(argv[1][1] == '-'){//Si hay modificacion al tamano de tabulacion.
-      string newTabSize = argv[1];
-      tabSize = stoi(newTabSize.substr(2));
-      filesStart = 2;
-      filesCount--;
+        string newTabSize = argv[1];
+        tabSize = stoi(newTabSize.substr(2));
+        filesStart = 2;
+        filesCount--;
     }
     int k = 0;
     if(fork()){//Father
-      for(int i = filesStart; i < filesCount; i++){//Ocupo otro semaforo o se cae porque el padre termina de ejecutarse antes que el
-          if(!fork()){//Counting Son
-             printf("\nSoy el hijo #%i!\n",i);
-             string outFileName = argv[i];//Variable para guardar el nombre del archivo de salida.
-             outFileName += ".sgr"; //Extension agregada al archivo indentado.
-             fileContent = fileContentToString(argv[1]);
-             e = new Embellecer(fileContent,tabSize, RWA);
-             ofstream outFile (outFileName);
-             outFile << e->processContent();
-             e->createUsedWords(b, (long)i);
-             delete e;
-             printf("\nArchivo del hijo #%i listo!\n",i);
-             _exit(-1);
-  	     } else {//Father
-           printf("\nSoy el padre!\n");
-        		char rWord[512];
-        		int wRepetitions;
-        		for(int index = 0; index < 64; index++){
-        			b.Recibir(rWord, wRepetitions,512, (long)i);
-              if(area->sec[1].Revisadas==filesCount&&k==0){semH.Signal();semP.Wait();k++;}
-              for(int index = 0; index < 64; index++){
-                  if(rWord == RWA[index]){
-                    area->sec[index].Revisadas++;
-                    area->sec[index].Veces += wRepetitions;
-                    //cout<<"Usos actuales de la palabra en "<< index<<" = "<<area[index*2+1]<<"\n";
-                    index = 64;
-                    //semH.Signal();
-                  }
+        for(int i = filesStart; i < filesCount; i++){//Ocupo otro semaforo o se cae porque el padre termina de ejecutarse antes que el
+            if(!fork()){//Counting Son
+                printf("\nSoy el hijo #%i!\n",i);
+                string outFileName = argv[i];//Variable para guardar el nombre del archivo de salida.
+                outFileName += ".sgr"; //Extension agregada al archivo indentado.
+                fileContent = fileContentToString(argv[1]);
+                e = new Embellecer(fileContent,tabSize, RWA);
+                ofstream outFile (outFileName);
+                outFile << e->processContent();
+                e->createUsedWords(b, (long)i);
+                delete e;
+                printf("\nArchivo del hijo #%i listo!\n",i);
+                _exit(-1);
+            } else {//Father
+                printf("\nSoy el padre!\n");
+                char rWord[64];
+                int wRepetitions;
+                for(int index = 0; index < 64; index++){
+                    b.Recibir(rWord, wRepetitions,512, (long)i);
+                    for(int indexj = 0; indexj < 64; indexj++){
+                        if(rWord == RWA[indexj]){
+                            area->sec[indexj].Revisadas++;
+                            area->sec[indexj].Veces += wRepetitions;
+                            //cout<< area->sec[indexj].Revisadas;
+                            //cout<<"Usos actuales de la palabra en "<< index<<" = "<<area[index*2+1]<<"\n";
+                            indexj = 64;
+                            if(area->sec[63].Revisadas == filesCount-1 && k == 0){
+                                semH.Signal();
+                                semP.Wait();
+                                k++;
+                            }
+                            //semH.Signal();
+                        }
+                    }
                 }
-        			}
-              //semH.Signal();
-              printf("\nFin el padre!\n");
-           }
-    		}
+                //semH.Signal();
+                printf("\nFin el padre!\n");
+            }
+        }
     } else {//Printing Son.
-       semH.Wait();
-       printf("Impresor\n");
-       for(int index = 0; index < 64; index++){
-         if(area->sec[index].Veces != 0){
-           cout<<"<"<<RWA[index]<<", "<< area->sec[index].Veces<<">\n";
-         }
-       }
-       semP.Signal();
-       cout<<"Fin Impresion\n";
-       _exit(0);
+        printf("Impresor\n");
+        semH.Wait();
+        for(int index = 0; index < 64; index++){
+            if(area->sec[index].Veces != 0){
+                printf("< %s, %i >\n",RWA[index].c_str(),area->sec[index].Veces);
+                //cout<<"<"<<RWA[index]<<", "<< area->sec[index].Veces<<">\n";
+            }
+        }
+        semP.Signal();
+        cout<<"Fin Impresion\n";
+        _exit(0);
     }
-      shmdt(area);
-      shmctl(thisId, IPC_RMID, NULL);
-  }
+    shmdt(area);
+    shmctl(thisId, IPC_RMID, NULL);
+}
 
 /* main de la tarea 0
   int main(int argc, char** argv) {
