@@ -1,6 +1,6 @@
 #ifndef BUZON_H
 #define BUZON_H
-#define KEY 0xB40340
+#define LLAVE 0xB40340
 #include <cstdio>
 #include <stdio.h>
 #include <string.h>

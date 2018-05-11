@@ -1,18 +1,21 @@
 #ifndef SEMAFORO_H
 #define SEMAFORO_H
-#define KEY 0xB40340
 #include <cstdio>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
 #include <unistd.h>
 using namespace std;
 class Semaforo{
 public:
-    Semaforo( int ValorInicial = 0);
+    Semaforo( int ValorInicial, key_t KEY);
     ~Semaforo();
-    int Signal();	// 
-    int Wait();	
-    
+    int Signal();	//
+    int Wait();
+
 private:
-    int id;	
+    int id;
+    key_t llaves;
     union semun {
         int              val;    /* Value for SETVAL */
         struct semid_ds *buf;    /* Buffer for IPC_STAT, IPC_SET */
@@ -21,4 +24,3 @@ private:
     };
 };
 #endif /* SEMAFORO_H */
-

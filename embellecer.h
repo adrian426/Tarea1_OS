@@ -14,7 +14,7 @@ public:
      * usar como tabulador.
      * MOD: N/A.
      */
-    Embellecer(string content,int tabSize);
+    Embellecer(string content,int tabSize, string[]);
 
     /*
      * EFE: Libera Espacio.
@@ -44,9 +44,6 @@ public:
      */
     void indent(int tabs);
 
-      
-    string* getRW();
-
 	/*
      * EFE: Lee la hilera a justificar, la guarda en otra donde su resultado ya está justificado y la retorna.
      * REQ: N/A.
@@ -56,11 +53,10 @@ public:
 
 private:
 	int used[64];
-	bool ignore;
-	int tabSize;
-	string uglyCode;
-	string prettyCode;
-	const string RESERVED_WORDS[64] = {"abstract",    "auto",     "bool",         "break",        "case",             "catch",    "char",
+	int tabSize;//Tamano de tabulacion
+	string uglyCode;//Hilera que contiene el codigo a indentar.
+	string prettyCode;//Hilera recipiente del codigo indentado.
+	string* RESERVED_WORDS;/* = {"abstract",    "auto",     "bool",         "break",        "case",             "catch",    "char",
                                  "class",       "const",    "const_cast",   "continue",     "decltype",         "default",  "delete",
                                                  "do",          "double",   "dynamic_cast", "else",         "enum",             "explicit", "extern",
                                                  "false",       "float",    "for",          "friend",       "goto",             "if",       "inline",
@@ -69,6 +65,6 @@ private:
                                                  "signed",      "sizeof",   "static",       "static_assert","static_cast",      "struct",   "switch",
                                                  "template",    "this",     "throw",        "true",         "try",              "typedef",  "typeid",
                                                  "typename",    "union",    "unsigned",     "using",        "virtual",          "void",     "volatile",
-                                                 "while"};
+                                                 "while"};*/
 	};
 #endif /* EMBELLECER_H */

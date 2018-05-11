@@ -42,110 +42,108 @@ string getFromConsole(){
 	return readCode;
 }
 
-struct shMData{
-    int used[64][2];
-    /*
-    const string RESERVED_WORDS[64] = {"abstract",    "auto",     "bool",         "break",        "case",             "catch",    "char",
-                                      "class",       "const",    "const_cast",   "continue",     "decltype",         "default",  "delete",
-                                       "do",          "double",   "dynamic_cast", "else",         "enum",             "explicit", "extern",
-                                       "false",       "float",    "for",          "friend",       "goto",             "if",       "inline",
-                                       "int",         "long",     "mutable",      "namespace",    "new",              "nullptr",  "operator",
-                                       "private",     "protected","public",       "register",     "reinterpret_cast", "return",   "short",
-                                       "signed",      "sizeof",   "static",       "static_assert","static_cast",      "struct",   "switch",
-                                       "template",    "this",     "throw",        "true",         "try",              "typedef",  "typeid",
-                                       "typename",    "union",    "unsigned",     "using",        "virtual",          "void",     "volatile",
-                                       "while"};
-                                       a = 2,
-                                       b = 2,
-                                       c = 7,
-                                       d = 6,
-                                       e = 4,
-                                       f = 4,
-                                       g = 1,
-                                       i = 3,
-                                       l = 1,
-                                       m = 1,
-
-
- */
-
+struct AreaCompartida {		// Defines the shared memory area representation
+  struct seccion{
+     int Revisadas;			// Tags included in this structure
+     int Veces;		// Tag count
+  } sec[64];
 };
 
+typedef struct AreaCompartida AC;
+
 int main(int argc, char** argv) {
-    int tabSize = 4;
     Embellecer *e;
     Buzon b;
-    Semaforo s;
-    int thisId = shmget(0x00B40340, sizeof(int[64][2]), 0700 | IPC_CREAT);
-    int* area = (int*) shmat(thisId, NULL, 0);
-    const string RWA[64] = {"abstract",    "auto",     "bool",         "break",        "case",             "catch",    "char",
-                                      "class",       "const",    "const_cast",   "continue",     "decltype",         "default",  "delete",
-                                       "do",          "double",   "dynamic_cast", "else",         "enum",             "explicit", "extern",
-                                       "false",       "float",    "for",          "friend",       "goto",             "if",       "inline",
-                                       "int",         "long",     "mutable",      "namespace",    "new",              "nullptr",  "operator",
-                                       "private",     "protected","public",       "register",     "reinterpret_cast", "return",   "short",
-                                       "signed",      "sizeof",   "static",       "static_assert","static_cast",      "struct",   "switch",
-                                       "template",    "this",     "throw",        "true",         "try",              "typedef",  "typeid",
-                                       "typename",    "union",    "unsigned",     "using",        "virtual",          "void",     "volatile",
-                                       "while"};
+    AC *area;
+    Semaforo semH(0,0x1B40340);
+    Semaforo semP(0,0x2B40340);
+    int filesCount = argc;
+    int printed = 0;//Valor para recordar que letras se han imprimido.
+    int tabSize = 4;//Tamano del espacio de tabulacion.
+    int filesStart = 1;//Variable que guarda donde inician los archivos.
+    string fileContent = ""; //Variable que guarda la hilera a justificar en caso de que fuera ingresada una hilera.
+    int thisId = shmget(0x00B40340, sizeof(AC), 0700 | IPC_CREAT);//Crea id de memoria compartida
+    area = (AC*) shmat(thisId, NULL, 0);//Reserva el espacio de memoria compartida.
+    string RWA[64] = {      "abstract",    "auto",     "bool",         "break",        "case",             "catch",    "char",
+                            "class",       "const",    "const_cast",   "continue",     "decltype",         "default",  "delete",
+                            "do",          "double",   "dynamic_cast", "else",         "enum",             "explicit", "extern",
+                            "false",       "float",    "for",          "friend",       "goto",             "if",       "inline",
+                            "int",         "long",     "mutable",      "namespace",    "new",              "nullptr",  "operator",
+                            "private",     "protected","public",       "register",     "reinterpret_cast", "return",   "short",
+                            "signed",      "sizeof",   "static",       "static_assert","static_cast",      "struct",   "switch",
+                            "template",    "this",     "throw",        "true",         "try",              "typedef",  "typeid",
+                            "typename",    "union",    "unsigned",     "using",        "virtual",          "void",     "volatile",
+                            "while"};
+                            /*Frecuencia de la primer letra de las palabras reservadas.
+                            a = 2, b = 2, c = 7, d = 6, e = 4, f = 4, g = 1, i = 3, l = 1, m = 1, n = 3, o = 1, p = 3,
+                            r = 3, s = 8, t = 8,u = 3,v = 3, w = 1.
+                            */
     for(int i = 0; i < 64; i++){//Blanquea la memoria compartida.
       for(int j = 0; j < 2; j++){
-        area[i*2+j] = 0;
+        area->sec[i].Revisadas = 0;
+        area->sec[i].Veces = 0;
       }
     }
-    string tabSizeStr = "";//variable que guarda la cantidad de espacios de tabulación en caso que sean ingresados en la ejecución.
-    string received = ""; //Variable que guarda la hilera con el código a justificar en caso que sea por la entrada estandar..
-    string fileContent = ""; //Variable que guarda la hilera a justificar en caso de que fuera ingresada una hilera.
-    string fInstruction = ""; //Variable que se usa para obtener los datos que da el usuario en comandos.
-  for(int i = 1; i < argc; i++){
-      if(!fork()){
-          if(i == 0){//Printing Son
-           printf("Impresor");
-            //s.Wait();
-            for(int index = 0; index < 64; index++){
-              if(area[index*2] != 0){
-                cout<<"<"<<RWA[i]<<", "<< area[index*2]<<">\n";
-                //printf("<%s, %i>\n",RWA[i],area[index*2+0]);
-              }
-            }
-            _exit(0);
-          } else {//indentation son.
-           printf("\nSoy el hijo #%i!\n",i);
-           string outFileName = argv[i];
-           outFileName += ".sgr"; //Variable para nombrar guardar el nombre del archivo de salida.
-           fileContent = fileContentToString(argv[1]);
-           e = new Embellecer(fileContent,tabSize);
-           ofstream outFile (outFileName);
-           outFile << e->processContent();
-           e->createUsedWords(b, (long)i);
-           delete e;
-           _exit(0);
-          }
-	     } else {//El tata.
-      		char rWord[512];
-      		int wRepetitions;
-      		for(int index = 0; index < 64; index++){
-      			b.Recibir(rWord, wRepetitions,512, (long)i);/*
-      			if(wRepetitions != 0){
-      				printf("<%s, %i>\n",rWord,wRepetitions);
-            }*/
-            for(int index = 0; index < 64; index++){
-                if(rWord == RWA[index]){
-                  area[index*2+0] += wRepetitions;
-                  area[index*2+1]++;
-                  index = 64;
+    if(argv[1][1] == '-'){//Si hay modificacion al tamano de tabulacion.
+      string newTabSize = argv[1];
+      tabSize = stoi(newTabSize.substr(2));
+      filesStart = 2;
+      filesCount--;
+    }
+    int k = 0;
+    if(fork()){//Father
+      for(int i = filesStart; i < filesCount; i++){//Ocupo otro semaforo o se cae porque el padre termina de ejecutarse antes que el
+          if(!fork()){//Counting Son
+             printf("\nSoy el hijo #%i!\n",i);
+             string outFileName = argv[i];//Variable para guardar el nombre del archivo de salida.
+             outFileName += ".sgr"; //Extension agregada al archivo indentado.
+             fileContent = fileContentToString(argv[1]);
+             e = new Embellecer(fileContent,tabSize, RWA);
+             ofstream outFile (outFileName);
+             outFile << e->processContent();
+             e->createUsedWords(b, (long)i);
+             delete e;
+             printf("\nArchivo del hijo #%i listo!\n",i);
+             _exit(-1);
+  	     } else {//Father
+           printf("\nSoy el padre!\n");
+        		char rWord[512];
+        		int wRepetitions;
+        		for(int index = 0; index < 64; index++){
+        			b.Recibir(rWord, wRepetitions,512, (long)i);
+              if(area->sec[1].Revisadas==filesCount&&k==0){semH.Signal();semP.Wait();k++;}
+              for(int index = 0; index < 64; index++){
+                  if(rWord == RWA[index]){
+                    area->sec[index].Revisadas++;
+                    area->sec[index].Veces += wRepetitions;
+                    //cout<<"Usos actuales de la palabra en "<< index<<" = "<<area[index*2+1]<<"\n";
+                    index = 64;
+                    //semH.Signal();
+                  }
                 }
-              }
-      			}
-            //s.Signal();
+        			}
+              //semH.Signal();
+              printf("\nFin el padre!\n");
+           }
+    		}
+    } else {//Printing Son.
+       semH.Wait();
+       printf("Impresor\n");
+       for(int index = 0; index < 64; index++){
+         if(area->sec[index].Veces != 0){
+           cout<<"<"<<RWA[index]<<", "<< area->sec[index].Veces<<">\n";
          }
-  		}
+       }
+       semP.Signal();
+       cout<<"Fin Impresion\n";
+       _exit(0);
+    }
       shmdt(area);
       shmctl(thisId, IPC_RMID, NULL);
   }
 
 /* main de la tarea 0
-int main(int argc, char** argv) {
+  int main(int argc, char** argv) {
     int tabSize = 4;
     Embellecer *e;
     string tabSizeStr = "";//variable que guarda la cantidad de espacios de tabulación en caso que sean ingresados en la ejecución.

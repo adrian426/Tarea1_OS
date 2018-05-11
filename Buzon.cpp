@@ -1,7 +1,7 @@
 #include "Buzon.h"
 
 Buzon::Buzon(){
-	int x = msgget(KEY, 0600|IPC_CREAT);
+	int x = msgget(LLAVE, 0600|IPC_CREAT);
 	if(-1 == x){
 		perror("Creando el Buzon");
 		_exit(-1);

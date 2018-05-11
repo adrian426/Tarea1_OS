@@ -1,10 +1,10 @@
-#include "Semaforo.h"  
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/sem.h>
-
-Semaforo::Semaforo(int ValorInicial){
-     id = semget(KEY,1,IPC_CREAT|0600);
+#include "Semaforo.h"
+#include <string>
+#include <iostream>
+Semaforo::Semaforo(int ValorInicial, key_t KEY){
+    llaves = KEY;
+    cout<<llaves<<"\n";
+     id = semget(llaves,1,IPC_CREAT|0600);
      if (-1 == id){
           perror("Creando el semaforo.");
           _exit(-1);
@@ -41,8 +41,10 @@ int Semaforo::Wait(){
      n.sem_num = 0;
      n.sem_op = -1;
      n.sem_flg = 0;
+     string tome;
      if(-1 == semop(id,&n,1)){
-          perror("Esperando señal.");
+          cout<<llaves<<"\n";
+          perror("Esperando señal");
           _exit(-1);
 		}
 }

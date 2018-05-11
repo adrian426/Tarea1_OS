@@ -1,9 +1,9 @@
 #include "embellecer.h"
 
-Embellecer::Embellecer(string contentFile, int tabs) {
+Embellecer::Embellecer(string contentFile, int tabs, string *RWA) {
     tabSize = tabs;
     uglyCode = contentFile;
-    ignore = true;
+    RESERVED_WORDS = RWA;
     for(int index = 0; index < 64; index++){
         used[index] = 0;
     }
@@ -36,9 +36,6 @@ void Embellecer::indent(int tabs){
 	}
 }
 
-string* Embellecer::getRW(){
-  return (string*)RESERVED_WORDS;
-}
 
 string Embellecer::processContent(){
   prettyCode = "";
