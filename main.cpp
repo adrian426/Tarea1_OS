@@ -43,6 +43,8 @@ int main(int argc, char** argv) {
     Semaforo semP(0,0x2B40340);//Semaforo usado para detener el proceso padre.
     int tabSize = 4;//Tamano del espacio de tabulacion.
     int filesStart = 1;//Variable que guarda donde inician los archivos.
+    char currentChar = 'a';
+    char lastChar = 'a';
     string fileContent = ""; //Variable que guarda la hilera a justificar en caso de que fuera ingresada una hilera.
     int thisId = shmget(0x00B40340, sizeof(AC), 0700 | IPC_CREAT);//Crea id de memoria compartida
     area = (AC*) shmat(thisId, NULL, 0);//Reserva el espacio de memoria compartida.
@@ -97,15 +99,18 @@ int main(int argc, char** argv) {
                             area->sec[indexj].Revisadas++;
                             area->sec[indexj].Veces += wRepetitions;
                             indexj = 64;
-                            if(area->sec[63].Revisadas == argc-filesStart && k == 0){//Se pausa la lectura del buzon del padre para imprmir.
+                            currentChar = RWA[index][0];
+                            if(currentChar <= lastChar && area->sec[index].Revisadas == argc-filesStart){//Se pausa la lectura del buzon del padre para imprmir.
+                                lastChar = currentChar;
                                 semH.Signal();//Se permite que el hijo imprima.
                                 semP.Wait();//Se Duerme el padre mientras el hijo imprime.
-                                k++;
                             }
                         }
                     }
+                    currentChar='a';
                 }
                 printf("\nFin del padre!\n");
+                if(i==argc-1){semH.Signal();}//Despierta al hijo que imprime para que el programa pueda terminar.
             }
         }
     } else {//Printing Son.
@@ -115,8 +120,14 @@ int main(int argc, char** argv) {
             if(area->sec[index].Veces != 0){//Imprime en pantalla las palabras reservadas cuya frequencia no es cero.
                 printf("< %s, %i >\n",RWA[index].c_str(),area->sec[index].Veces);
             }
+            currentChar = RWA[index][0];
+            if(currentChar <= lastChar){
+              lastChar = currentChar;
+              semP.Signal();
+              semH.Wait();
+            }
         }
-        semP.Signal();//Se despierta al padre.
+        //semP.Signal();//Se despierta al padre.
         cout<<"Fin Impresion!\n";
         _exit(0);
     }
