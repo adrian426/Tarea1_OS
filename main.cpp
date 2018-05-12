@@ -36,6 +36,10 @@ struct AreaCompartida {		// Estructura usada para la memoria comparida
 typedef struct AreaCompartida AC;
 
 int main(int argc, char** argv) {
+  if(argc < 2){
+      printf("ERROR: Debe ingresar algun archivo a indentar.\n");
+      return -1;
+  }
     Embellecer *e;//Embellecedor de codigo.
     Buzon b;//Buzon para la comunicacion entre procesos.
     AC *area;//Puntero para la memoria compartida.
@@ -43,8 +47,8 @@ int main(int argc, char** argv) {
     Semaforo semP(0,0x2B40340);//Semaforo usado para detener el proceso padre.
     int tabSize = 4;//Tamano del espacio de tabulacion.
     int filesStart = 1;//Variable que guarda donde inician los archivos.
-    char currentChar = 'a';
-    char lastChar = 'a';
+    char currentChar = 'a';//Guarda el primer caracter de la palabra actual que se esta enviando a imprimir.
+    char lastChar = 'a';//Guarda el primer caracter de la primer palabra que se envio anteriormente a imprimir.
     string fileContent = ""; //Variable que guarda la hilera a justificar en caso de que fuera ingresada una hilera.
     int thisId = shmget(0x00B40340, sizeof(AC), 0700 | IPC_CREAT);//Crea id de memoria compartida
     area = (AC*) shmat(thisId, NULL, 0);//Reserva el espacio de memoria compartida.
@@ -69,6 +73,7 @@ int main(int argc, char** argv) {
         }
     }
     if(argv[1][0] == '-'){//Si hay modificacion al tamano de tabulacion.
+        if(argc == 2){printf("ERROR: Debe ingresar un archivo a indentar.\n"); return -1;}
         string newTabSize = argv[1];
         tabSize = stoi(newTabSize.substr(2));
         filesStart = 2;
@@ -107,7 +112,7 @@ int main(int argc, char** argv) {
                             }
                         }
                     }
-                    currentChar='a';
+                    currentChar='a';//Se reinicia el valor del primer caracter que se quiera imprimir.
                 }
                 printf("\nFin del padre!\n");
                 if(i==argc-1){semH.Signal();}//Despierta al hijo que imprime para que el programa pueda terminar.
@@ -117,14 +122,14 @@ int main(int argc, char** argv) {
         semH.Wait();//Se espera hasta que el padre de permiso de imprimir.
         printf("Hijo Impresor!\n");
         for(int index = 0; index < 64; index++){
-            if(area->sec[index].Veces != 0){//Imprime en pantalla las palabras reservadas cuya frequencia no es cero.
-                printf("< %s, %i >\n",RWA[index].c_str(),area->sec[index].Veces);
-            }
             currentChar = RWA[index][0];
-            if(currentChar <= lastChar){
+            if(currentChar <= lastChar){//Si el caracter que se va a imprimir es distinto al anterior se pausa la impresion.
               lastChar = currentChar;
               semP.Signal();
               semH.Wait();
+            }
+            if(area->sec[index].Veces != 0){//Imprime en pantalla las palabras reservadas cuya frequencia no es cero.
+                printf("< %s, %i >\n",RWA[index].c_str(),area->sec[index].Veces);
             }
         }
         //semP.Signal();//Se despierta al padre.
