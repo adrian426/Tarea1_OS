@@ -13,6 +13,9 @@ Embellecer::~Embellecer(){
 
 }
 
+/*
+  EFE: Aumenta el contador de Frecuencia de la palabra reservada.
+*/
 void Embellecer::updateCountReservedW(string reserved){
     for(int index = 0; index < 64; index++){
 		if(reserved == RESERVED_WORDS[index]){
@@ -21,6 +24,12 @@ void Embellecer::updateCountReservedW(string reserved){
 		}
 }
 
+/*
+EFE:  Cuando ya se termino de indentar el archivo, este metodo envia como un mensaje
+al buzon la palabra reservada junto a su frequencia.
+REQ: Buzon para enviar el mensaje, Tipo para el mensaje.
+MOD: N/A.
+*/
 void Embellecer::createUsedWords(Buzon &b, long tipo){
     for(int index = 0; index < 64; index++){
         char* converted = new char[(RESERVED_WORDS[index].length())+1];
@@ -29,14 +38,24 @@ void Embellecer::createUsedWords(Buzon &b, long tipo){
         delete[] converted;
     }
 }
-
+/*
+  EFE: Indenta prettyCode.
+*/
 void Embellecer::indent(int tabs){
 	for(int i = 0; i < tabs; i++){
 		prettyCode += ' ';
 	}
 }
 
-
+/*
+*EFE: Va armando cada palabra de uglyCode, cuando la tiene armada, revisa si es una palabra reservada
+*o no, luego de esto, agrega la palabra formada a prettyCode y Blanquea word. Las palabras
+*se forman mediante el uso de caracteres especiales que cuando alguno es encontrado, la palabra esta
+*terminada.
+*REQ: N/A.
+*MOD: prettyCode.
+*
+*/
 string Embellecer::processContent(){
   prettyCode = "";
 	int cuentaSimbolos;

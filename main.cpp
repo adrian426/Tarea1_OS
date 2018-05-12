@@ -24,41 +24,23 @@ string fileContentToString(char* file){
     }
     return contentRead;
 }
-/*
-	EFE: Solicita datos al usuario desde consola hasta que ingrese la palabra *terminate en una nueva linea.*
-	REQ: N/A.
-	MOD: N/A.
-*/
-string getFromConsole(){
-	string readCode = "";
-	string line = "";
-	bool terminate = false;
-	cout<<"Ingrese el codigo que desea justificar.\n Escriba *terminate* en una nueva linea para detener la solicitud de texto.\n";
-		while(getline(std::cin, line) && line != "*terminate*"){//Solicitud de datos.
-			readCode += line;
-			readCode += "\n";
-		}
 
-	return readCode;
-}
 
-struct AreaCompartida {		// Defines the shared memory area representation
-  struct seccion{
-     int Revisadas;			// Tags included in this structure
-     int Veces;		// Tag count
+struct AreaCompartida {		// Estructura usada para la memoria comparida
+  struct seccion{//Contenido de la estructura.
+     int Revisadas;			// Contiene cuantas veces se ha revisado la palabra asignada al indice de esta palabra.
+     int Veces;		// Contiene cuantas veces se ha usado la palabra reservada en todos los documentos.
   } sec[64];
 };
 
 typedef struct AreaCompartida AC;
 
 int main(int argc, char** argv) {
-    Embellecer *e;
-    Buzon b;
-    AC *area;
-    Semaforo semH(0,0x1B40340);
-    Semaforo semP(0,0x2B40340);
-    int filesCount = argc;
-    int printed = 0;//Valor para recordar que letras se han imprimido.
+    Embellecer *e;//Embellecedor de codigo.
+    Buzon b;//Buzon para la comunicacion entre procesos.
+    AC *area;//Puntero para la memoria compartida.
+    Semaforo semH(0,0x1B40340);//Semaforo usado para detener el proceso hijo.
+    Semaforo semP(0,0x2B40340);//Semaforo usado para detener el proceso padre.
     int tabSize = 4;//Tamano del espacio de tabulacion.
     int filesStart = 1;//Variable que guarda donde inician los archivos.
     string fileContent = ""; //Variable que guarda la hilera a justificar en caso de que fuera ingresada una hilera.
@@ -84,188 +66,60 @@ int main(int argc, char** argv) {
             area->sec[i].Veces = 0;
         }
     }
-    if(argv[1][1] == '-'){//Si hay modificacion al tamano de tabulacion.
+    if(argv[1][0] == '-'){//Si hay modificacion al tamano de tabulacion.
         string newTabSize = argv[1];
         tabSize = stoi(newTabSize.substr(2));
         filesStart = 2;
-        filesCount--;
-    }
+      }
     int k = 0;
     if(fork()){//Father
-        for(int i = filesStart; i < filesCount; i++){//Ocupo otro semaforo o se cae porque el padre termina de ejecutarse antes que el
+        for(int i = filesStart; i < argc; i++){//Ocupo otro semaforo o se cae porque el padre termina de ejecutarse antes que el
             if(!fork()){//Counting Son
-                printf("\nSoy el hijo #%i!\n",i);
+                printf("\nHijo Indentador!\n");
                 string outFileName = argv[i];//Variable para guardar el nombre del archivo de salida.
                 outFileName += ".sgr"; //Extension agregada al archivo indentado.
-                fileContent = fileContentToString(argv[1]);
+                fileContent = fileContentToString(argv[i]);
                 e = new Embellecer(fileContent,tabSize, RWA);
                 ofstream outFile (outFileName);
                 outFile << e->processContent();
                 e->createUsedWords(b, (long)i);
                 delete e;
-                printf("\nArchivo del hijo #%i listo!\n",i);
-                _exit(-1);
+                printf("\nArchivo del hijo listo!\n");\
+                _exit(0);
             } else {//Father
                 printf("\nSoy el padre!\n");
                 char rWord[64];
                 int wRepetitions;
-                for(int index = 0; index < 64; index++){
+                for(int index = 0; index < 64; index++){//Se reciben las 64 palabras reservadas del buzon.
                     b.Recibir(rWord, wRepetitions,512, (long)i);
-                    for(int indexj = 0; indexj < 64; indexj++){
+                    for(int indexj = 0; indexj < 64; indexj++){//Se busca la palabra sacada del buzon en la memoria compartida y se aumentan sus valores.
                         if(rWord == RWA[indexj]){
                             area->sec[indexj].Revisadas++;
                             area->sec[indexj].Veces += wRepetitions;
-                            //cout<< area->sec[indexj].Revisadas;
-                            //cout<<"Usos actuales de la palabra en "<< index<<" = "<<area[index*2+1]<<"\n";
                             indexj = 64;
-                            if(area->sec[63].Revisadas == filesCount-1 && k == 0){
-                                semH.Signal();
-                                semP.Wait();
+                            if(area->sec[63].Revisadas == argc-filesStart && k == 0){//Se pausa la lectura del buzon del padre para imprmir.
+                                semH.Signal();//Se permite que el hijo imprima.
+                                semP.Wait();//Se Duerme el padre mientras el hijo imprime.
                                 k++;
                             }
-                            //semH.Signal();
                         }
                     }
                 }
-                //semH.Signal();
-                printf("\nFin el padre!\n");
+                printf("\nFin del padre!\n");
             }
         }
     } else {//Printing Son.
-        printf("Impresor\n");
-        semH.Wait();
+        semH.Wait();//Se espera hasta que el padre de permiso de imprimir.
+        printf("Hijo Impresor!\n");
         for(int index = 0; index < 64; index++){
-            if(area->sec[index].Veces != 0){
+            if(area->sec[index].Veces != 0){//Imprime en pantalla las palabras reservadas cuya frequencia no es cero.
                 printf("< %s, %i >\n",RWA[index].c_str(),area->sec[index].Veces);
-                //cout<<"<"<<RWA[index]<<", "<< area->sec[index].Veces<<">\n";
             }
         }
-        semP.Signal();
-        cout<<"Fin Impresion\n";
+        semP.Signal();//Se despierta al padre.
+        cout<<"Fin Impresion!\n";
         _exit(0);
     }
-    shmdt(area);
-    shmctl(thisId, IPC_RMID, NULL);
+    shmdt(area);//Se hace detach de la memoria compartida.
+    shmctl(thisId, IPC_RMID, NULL);//Se elimina el espacio de memoria compartida.
 }
-
-/* main de la tarea 0
-  int main(int argc, char** argv) {
-    int tabSize = 4;
-    Embellecer *e;
-    string tabSizeStr = "";//variable que guarda la cantidad de espacios de tabulación en caso que sean ingresados en la ejecución.
-    string received = ""; //Variable que guarda la hilera con el código a justificar en caso que sea por la entrada estandar..
-    string fileContent = ""; //Variable que guarda la hilera a justificar en caso de que fuera ingresada una hilera.
-    string outFileName = "rst.txt"; //Variable para nombrar guardar el nombre del archivo de salida.
-    string fInstruction = ""; //Variable que se usa para obtener los datos que da el usuario en comandos.
-    ofstream x ("cuentaDePalabrasReservadas.txt"); //Creación del archivo con la cuenta del uso de palabras reservadas.
-
-    switch(argc){
-        case 1: //Sin argumentos.
-        {
-			received = getFromConsole();
-            e = new Embellecer(received, tabSize);
-            ofstream outFile (outFileName);
-            outFile << e->processContent();
-			cout<<e->processContent();
-            x << e->createUsedWords();
-        }
-            break;
-        case 2:
-        {
-            if(argv[1][0]=='-'){
-                if(argv[1][1] == 'e'){//-eX
-                    fInstruction = argv[1];
-					tabSizeStr = fInstruction.substr(2);
-					tabSize = stoi(tabSizeStr);
-					if(tabSize < 0){
-						cout<<"No se aceptan numeros negativos para tabular.\n";
-						return -1;
-					}
-                } else {//-oX
-                    fInstruction = argv[1];
-                    outFileName = fInstruction.substr(2);
-                }
-
-                received = getFromConsole();
-                e = new Embellecer(received, tabSize);
-                ofstream outFile (outFileName);
-                outFile << e->processContent();
-                x << e->createUsedWords();
-            } else {//fileToJustify
-                fileContent = fileContentToString(argv[1]);
-                e = new Embellecer(fileContent,tabSize);
-                ofstream outFile (outFileName);
-                outFile << e->processContent();
-                x << e->createUsedWords();
-            }
-        }
-            break;
-        case 3:
-        {
-            if(argv[1][0] == '-'){
-                if(argv[2][0] == '-'){//-eX -o
-					fInstruction = argv[1];
-					tabSizeStr = fInstruction.substr(2);
-					tabSize = stoi(tabSizeStr);
-					if(tabSize < 0){
-						cout<<"No se aceptan numeros negativos para tabular.\n";
-						return -1;
-					}
-                    fInstruction = argv[2];
-                    outFileName = fInstruction.substr(2);
-
-                    received = getFromConsole();
-
-                    e = new Embellecer(received, tabSize);
-                    ofstream outFile (outFileName);
-                    outFile << e->processContent();
-                    x << e->createUsedWords();
-                } else {//-eX fileToJustify.
-                    fInstruction = argv[1];
-					tabSizeStr = fInstruction.substr(2);
-					tabSize = stoi(tabSizeStr);
-					if(tabSize < 0){
-						cout<<"No se aceptan numeros negativos para tabular.\n";
-						return -1;
-					}
-                    fileContent = fileContentToString(argv[2]);
-                    e = new Embellecer(fileContent,tabSize);
-                    ofstream outFile (outFileName);
-                    outFile << e->processContent();
-                    x << e->createUsedWords();
-                }
-            } else {//fileToJustify -o
-                    fInstruction = argv[2];
-                    fileContent = fileContentToString(argv[1]);
-                    e = new Embellecer(fileContent,tabSize);
-                    outFileName = fInstruction.substr(2);
-                    ofstream outFile (outFileName);
-                    outFile << e->processContent();
-                    x << e->createUsedWords();
-            }
-            break;
-        }
-        case 4:
-        {//-eX fileToJustify -oX
-			fInstruction = argv[1];
-			tabSizeStr = fInstruction.substr(2);
-			tabSize = stoi(tabSizeStr);
-					if(tabSize < 0){
-						cout<<"No se aceptan numeros negativos para tabular.\n";
-						return -1;
-					}
-			cout << tabSizeStr <<endl;
-			cout << tabSize <<endl;
-            fInstruction = argv[3];
-            fileContent = fileContentToString(argv[2]);
-            e = new Embellecer(fileContent,tabSize);
-            outFileName = fInstruction.substr(2);
-            ofstream outFile (outFileName);
-            outFile << e->processContent();
-            x << e->createUsedWords();
-        }
-            break;
-    }
-    return 0;
-}
-*/

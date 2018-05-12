@@ -3,7 +3,6 @@
 #include <iostream>
 Semaforo::Semaforo(int ValorInicial, key_t KEY){
     llaves = KEY;
-    cout<<llaves<<"\n";
      id = semget(llaves,1,IPC_CREAT|0600);
      if (-1 == id){
           perror("Creando el semaforo.");
